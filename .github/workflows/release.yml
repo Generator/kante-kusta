@@ -141,6 +141,9 @@ jobs:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
             artifact: kk-linux-x64-musl
+          - os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-musl
+            artifact: kk-linux-arm64-musl
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -238,7 +241,8 @@ jobs:
             | macOS (Apple Silicon) | `kk-macos-arm64.tar.gz` |
             | Linux (x64) | `kk-linux-x64.tar.gz` |
             | Linux (x64 musl static) | `kk-linux-x64-musl.tar.gz` |
-            | Linux (ARM64 / Raspberry Pi) | `kk-linux-arm64.tar.gz` |
+            | Linux (ARM64) | `kk-linux-arm64.tar.gz` |
+            | Linux (ARM64 musl static) | `kk-linux-arm64-musl.tar.gz` |
 
             ### Quick Install
 
