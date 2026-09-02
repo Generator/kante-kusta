@@ -125,7 +125,7 @@ impl KuantoKustaClient {
         let resp = self
             .client
             .get(&url)
-            .query(&[("q", query), ("rows", &max.to_string()), ("page", &"1".to_string())])
+            .query(&[("q", query), ("rows", &max.to_string()), ("page", &"1")])
             .send()
             .await
             .context("Failed to fetch search results")?;
