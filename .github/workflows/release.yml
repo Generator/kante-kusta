@@ -33,7 +33,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y pkg-config cmake golang-go perl clang llvm libclang-dev lld musl-tools musl-dev
+        run: sudo apt-get update && sudo apt-get install -y pkg-config
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
@@ -149,7 +149,7 @@ jobs:
 
       - name: Install dependencies (Linux)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y pkg-config cmake golang-go perl clang llvm libclang-dev lld musl-tools musl-dev
+        run: sudo apt-get update && sudo apt-get install -y pkg-config musl-tools musl-dev
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -162,12 +162,7 @@ jobs:
           key: release-${{ matrix.target }}
 
       - name: Build
-        run: |
-          if [[ "${{ matrix.target }}" == *"musl"* ]]; then
-            cargo build --release --target ${{ matrix.target }} --no-default-features
-          else
-            cargo build --release --target ${{ matrix.target }}
-          fi
+        run: cargo build --release --target ${{ matrix.target }}
 
       - name: Package (Unix)
         run: |

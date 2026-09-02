@@ -1,4 +1,4 @@
-//! Search command (via HTML scraping)
+//! Search command (via API)
 
 use crate::api::{KuantoKustaClient, SearchResult};
 use crate::format::{format_products, OutputFormat};

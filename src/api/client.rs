@@ -32,7 +32,7 @@ impl KuantoKustaClient {
         Ok(Self { client, base_url: base_url.to_string() })
     }
 
-    /// Get products (popular products - note: search is SSR-only)
+    /// Get products (popular products)
     pub async fn products(&self, rows: u32) -> Result<ProductsResponse> {
         let url = format!("{}/products", self.base_url);
         let resp = self
@@ -119,10 +119,29 @@ impl KuantoKustaClient {
         resp.json().await.context("Failed to parse categories")
     }
 
-    /// Search products (via HTML scraping with wreq)
-    pub async fn search(&self, query: &str, max: usize) -> Result<super::scraper::SearchResult> {
-        super::scraper::search(query, max).await
+    /// Search products via API (`GET /products?q=&rows=&page=`)
+    pub async fn search(&self, query: &str, max: usize) -> Result<SearchResult> {
+        let url = format!("{}/products", self.base_url);
+        let resp = self
+            .client
+            .get(&url)
+            .query(&[("q", query), ("rows", &max.to_string()), ("page", &"1".to_string())])
+            .send()
+            .await
+            .context("Failed to fetch search results")?;
+
+        let products: ProductsResponse =
+            resp.json().await.context("Failed to parse search response")?;
+
+        Ok(SearchResult { products: products.data, total: products.total })
     }
+}
+
+/// Search result (API)
+#[derive(Debug)]
+pub struct SearchResult {
+    pub products: Vec<Product>,
+    pub total: u64,
 }
 
 impl Default for KuantoKustaClient {
@@ -394,5 +413,45 @@ mod tests {
     async fn test_with_base_url() {
         let client = KuantoKustaClient::with_base_url("http://localhost:8080").unwrap();
         assert_eq!(client.base_url, "http://localhost:8080");
+    }
+
+    #[tokio::test]
+    async fn test_search_success() {
+        let mock_server = MockServer::start().await;
+
+        Mock::given(method("GET"))
+            .and(path("/products"))
+            .and(query_param("q", "iphone"))
+            .and(query_param("rows", "10"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(mock_products_response()))
+            .mount(&mock_server)
+            .await;
+
+        let client = KuantoKustaClient::with_base_url(&mock_server.uri()).unwrap();
+        let result = client.search("iphone", 10).await;
+
+        assert!(result.is_ok());
+        let search = result.unwrap();
+        assert_eq!(search.products.len(), 1);
+        assert_eq!(search.total, 1);
+        assert_eq!(search.products[0].id, 12345);
+    }
+
+    #[tokio::test]
+    async fn test_search_empty() {
+        let mock_server = MockServer::start().await;
+
+        let empty = serde_json::json!({"data": [], "page": 1, "rows": 10, "total": 0});
+        Mock::given(method("GET"))
+            .and(path("/products"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(empty))
+            .mount(&mock_server)
+            .await;
+
+        let client = KuantoKustaClient::with_base_url(&mock_server.uri()).unwrap();
+        let result = client.search("nothing", 10).await;
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().products.len(), 0);
     }
 }
