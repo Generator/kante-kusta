@@ -1,11 +1,18 @@
 //! HTML scraper for search (extracts __`NEXT_DATA`__ JSON)
-//! Uses wreq for TLS fingerprint emulation to bypass CDN protection.
+//! Uses `wreq` (feature `search-wreq`) for TLS fingerprint emulation to bypass CDN
+//! protection. When built without that feature (e.g. `x86_64-unknown-linux-musl`
+//! with `--no-default-features`) it falls back to `reqwest` + `rustls` which is
+//! fully static-compatible.
 
 use super::models::Product;
 use anyhow::{Context, Result};
 use serde::Deserialize;
-use wreq::Client;
+#[cfg(feature = "search-wreq")]
+use wreq::Client as WreqClient;
+#[cfg(feature = "search-wreq")]
 use wreq_util::Emulation;
+#[cfg(not(feature = "search-wreq"))]
+use reqwest::Client;
 
 const WEB_BASE: &str = "https://www.kuantokusta.pt";
 
@@ -49,25 +56,48 @@ pub async fn search(query: &str, max: usize) -> Result<SearchResult> {
 pub async fn search_with_base_url(query: &str, max: usize, base_url: &str) -> Result<SearchResult> {
     let url = format!("{base_url}/search?q={}", urlencoding::encode(query));
 
-    // Use wreq for TLS fingerprint emulation
-    let client = Client::builder()
-        .cookie_store(true)
-        .gzip(true)
-        .brotli(true)
-        .build()
-        .context("Failed to create wreq client")?;
+    #[cfg(feature = "search-wreq")]
+    let html = {
+        // Use wreq for TLS fingerprint emulation (glibc, full fidelity)
+        let client = WreqClient::builder()
+            .cookie_store(true)
+            .gzip(true)
+            .brotli(true)
+            .build()
+            .context("Failed to create wreq client")?;
 
-    let html = client
-        .get(&url)
-        .emulation(Emulation::Chrome131)
-        .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
-        .header("Accept-Language", "pt-PT,pt;q=0.9,en;q=0.8")
-        .send()
-        .await
-        .context("Failed to fetch search page")?
-        .text()
-        .await
-        .context("Failed to read search response")?;
+        client
+            .get(&url)
+            .emulation(Emulation::Chrome131)
+            .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+            .header("Accept-Language", "pt-PT,pt;q=0.9,en;q=0.8")
+            .send()
+            .await
+            .context("Failed to fetch search page")?
+            .text()
+            .await
+            .context("Failed to read search response")?
+    };
+
+    #[cfg(not(feature = "search-wreq"))]
+    let html = {
+        // Pure-Rust fallback for musl static builds (reqwest + rustls)
+        let client = Client::builder()
+            .gzip(true)
+            .build()
+            .context("Failed to create HTTP client")?;
+
+        client
+            .get(&url)
+            .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+            .header("Accept-Language", "pt-PT,pt;q=0.9,en;q=0.8")
+            .send()
+            .await
+            .context("Failed to fetch search page")?
+            .text()
+            .await
+            .context("Failed to read search response")?
+    };
 
     parse_search_html(&html, max)
 }

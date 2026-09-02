@@ -27,7 +27,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y libssl-dev pkg-config
+        run: sudo apt-get update && sudo apt-get install -y pkg-config cmake golang-go perl clang llvm libclang-dev lld musl-tools musl-dev
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo check --all-targets
@@ -54,7 +54,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y libssl-dev pkg-config
+        run: sudo apt-get update && sudo apt-get install -y pkg-config cmake golang-go perl clang llvm libclang-dev lld musl-tools musl-dev
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
@@ -70,7 +70,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y libssl-dev pkg-config
+        run: sudo apt-get update && sudo apt-get install -y pkg-config cmake golang-go perl clang llvm libclang-dev lld musl-tools musl-dev
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo test
