@@ -6,13 +6,13 @@
 
 use super::models::Product;
 use anyhow::{Context, Result};
+#[cfg(not(feature = "search-wreq"))]
+use reqwest::Client;
 use serde::Deserialize;
 #[cfg(feature = "search-wreq")]
 use wreq::Client as WreqClient;
 #[cfg(feature = "search-wreq")]
 use wreq_util::Emulation;
-#[cfg(not(feature = "search-wreq"))]
-use reqwest::Client;
 
 const WEB_BASE: &str = "https://www.kuantokusta.pt";
 
@@ -82,10 +82,8 @@ pub async fn search_with_base_url(query: &str, max: usize, base_url: &str) -> Re
     #[cfg(not(feature = "search-wreq"))]
     let html = {
         // Pure-Rust fallback for musl static builds (reqwest + rustls)
-        let client = Client::builder()
-            .gzip(true)
-            .build()
-            .context("Failed to create HTTP client")?;
+        let client =
+            Client::builder().gzip(true).build().context("Failed to create HTTP client")?;
 
         client
             .get(&url)
